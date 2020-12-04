@@ -2,6 +2,7 @@ package servidor;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.net.Socket;
 import java.util.Scanner;
 import java.net.URI;
@@ -23,8 +24,14 @@ public class TratarCliente implements Runnable {
             while (true) {
                 ouvirCliente = new Scanner(cliente.getInputStream());
                 String filme = ouvirCliente.nextLine();
+                String resposta = " ";
                 System.out.println("Cliente pesquisando o filme: " + filme);
-                String resposta = getResponseFromAPI(filme);
+                try{
+                    resposta = getResponseFromAPI(filme);
+                }
+                catch (UncheckedIOException erro){
+                    resposta = "Filme não encontrado";
+                }
 
                 PrintStream enviarParaCliente = new PrintStream(cliente.getOutputStream());
                 enviarParaCliente.println(resposta);
@@ -45,7 +52,7 @@ public class TratarCliente implements Runnable {
         var client = HttpClient.newHttpClient();
         // Cria um request na API omdbapi
         var request = HttpRequest.newBuilder(
-            URI.create("http://www.omdbapi.com/?i=tt3896198&apikey=180dc1e7&t=" + movieTitle))
+            URI.create("http://www.omdbapi.com/?i=tt3896198&apikey=180dc1e7&t=" + movieTitle + "&type=movie"))
             .header("accept", "application/json")
             .build();
 
