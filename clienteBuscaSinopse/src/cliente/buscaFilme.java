@@ -27,6 +27,7 @@ public class buscaFilme {
             String resposta = ouvirRespostaDoServidor.nextLine();
 
             System.out.println(resposta);
+            System.out.println(" ");
         }
     }
 }
