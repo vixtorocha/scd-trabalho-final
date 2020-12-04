@@ -3,16 +3,17 @@ package servidor;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.util.Map;
 import java.util.Scanner;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.util.concurrent.ExecutionException;
 
 public class TratarCliente implements Runnable {
 
     private Socket cliente;
-    private Map<String, String> curiosidades;
-    public TratarCliente(Socket cliente, Map<String, String> curiosidades) {
+    public TratarCliente(Socket cliente) {
         this.cliente = cliente;
-        this.curiosidades = curiosidades;
     }
 
     @Override
@@ -21,22 +22,39 @@ public class TratarCliente implements Runnable {
         try {
             while (true) {
                 ouvirCliente = new Scanner(cliente.getInputStream());
-                String curiosidade = ouvirCliente.nextLine();
-                System.out.println("Cliente pesquisando curiosidade sobre: " + curiosidade);
-                String resposta = "";
-
-                if (curiosidades.containsKey(curiosidade)) {
-                    resposta = curiosidades.get(curiosidade);
-                } else {
-                    resposta = "Nenhuma curiosidade relevante encontrada!";
-                }
+                String filme = ouvirCliente.nextLine();
+                System.out.println("Cliente pesquisando o filme: " + filme);
+                String resposta = getResponseFromAPI(filme);
 
                 PrintStream enviarParaCliente = new PrintStream(cliente.getOutputStream());
                 enviarParaCliente.println(resposta);
             }
-            } catch(IOException e){
-                e.printStackTrace();
-            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
+    }
+
+    public String getResponseFromAPI(String movieTitle) throws IOException, ExecutionException, InterruptedException {
+        movieTitle = movieTitle.replaceAll("\\s+","+");
+        // Cria um client
+        var client = HttpClient.newHttpClient();
+        // Cria um request na API omdbapi
+        var request = HttpRequest.newBuilder(
+            URI.create("http://www.omdbapi.com/?i=tt3896198&apikey=180dc1e7&t=" + movieTitle))
+            .header("accept", "application/json")
+            .build();
+
+        // Manda um request no client.
+        var responseFuture = client.sendAsync(request, new JsonBodyHandler<>(Filme.class));
+        // Pausa até o request concluir.
+        var respostaFilme = responseFuture.get().body().get();
+
+        String respostaDoMetodo = "Filme: " + respostaFilme.Title + ". Lançado em: " + respostaFilme.Year + ". Sinopse em inglês: " + respostaFilme.Plot;
+        return respostaDoMetodo;
     }
 }
